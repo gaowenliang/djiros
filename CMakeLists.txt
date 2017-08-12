@@ -20,6 +20,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADDITIONAL_CXX_FLAG}")
 
 ## Set this value to true if camera-imu sync function is needed
 set(ENABLE_DJIFOX true)
+set(ENABLE_DJIPT true)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -121,6 +122,36 @@ if(ENABLE_DJIFOX)
   find_package(mvIMPACT REQUIRED)
 endif(ENABLE_DJIFOX)
 
+if(ENABLE_DJIPT)
+
+    find_package(OpenCV REQUIRED)
+
+
+    FIND_PATH(POINTGREY_INCLUDE_DIR FlyCapture2.h
+        /usr/include/flycapture
+        /usr/local/include/flycapture
+    )
+    message(STATUS "Found POINTGREYCamera: ${POINTGREY_INCLUDE_DIR}")
+
+    FIND_LIBRARY(POINTGREY_LIBRARY NAMES libflycapture.so
+       /usr/lib
+    )
+    message(STATUS "Found POINTGREYCamera library: ${POINTGREY_LIBRARY}")
+
+    if (POINTGREY_INCLUDE_DIR AND POINTGREY_LIBRARY)
+       set(POINTGREY_FOUND TRUE)
+       set(POINTGREY_LIBRARIES ${POINTGREY_LIBRARY})
+    else (POINTGREY_INCLUDE_DIR AND POINTGREY_LIBRARY)
+       set(POINTGREY_FOUND FALSE)
+    endif (POINTGREY_INCLUDE_DIR AND POINTGREY_LIBRARY)
+
+    if (POINTGREY_FOUND)
+          message(STATUS "Found LibPOINTGREY: ${POINTGREY_LIBRARIES}")
+    else (POINTGREY_FOUND)
+               message(STATUS "don't find LibPOINTGREY")
+    endif (POINTGREY_FOUND)
+endif(ENABLE_DJIPT)
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 find_package(Eigen REQUIRED)
 
@@ -173,6 +204,30 @@ if (ENABLE_DJIFOX)
     djiros_generate_messages_cpp)
 
 endif(ENABLE_DJIFOX)
+
+if (ENABLE_DJIPT)
+  add_executable(djipt_node
+    src/djiros/djipt_node.cpp
+    src/ptgrey_lib/multiCamera.cpp
+    src/ptgrey_lib/multiCameraReader.cpp
+    src/ptgrey_lib/singleCamera.cpp
+    src/ptgrey_lib/camera.cpp
+    ${DJIROS_SOURCES}
+    ${DJI_OSDK_ROS_SOURCES}
+  )
+
+  target_link_libraries(djipt_node
+     ${catkin_LIBRARIES}
+     ${OpenCV_LIBS}
+     ${POINTGREY_LIBRARIES}
+     ${DJIOSDK_LIBRARIES}
+  )
+
+  add_dependencies(djipt_node
+    djiros_generate_messages_cpp)
+
+endif(ENABLE_DJIPT)
+
 
 option(USE_COLLISION_AVOIDANCE "Use DJI collision avoidance library" OFF)
 if(USE_COLLISION_AVOIDANCE)
